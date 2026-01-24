@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Penjaga Nusantara - Big Grass Tile</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Roboto:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #2e8b57;
+            font-family: 'Roboto', sans-serif;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        #hud {
+            display: none;
+            padding: 10px;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        .bar-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            margin-bottom: 5px;
+            position: relative;
+            height: 20px;
+            border: 2px solid #444;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.2s;
+        }
+
+        #hp-bar { background: linear-gradient(90deg, #e74c3c, #c0392b); width: 100%; }
+        #exp-bar { background: linear-gradient(90deg, #2ecc71, #27ae60); width: 0%; }
+        
+        .bar-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 10px;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 1px black;
+        }
+
+        #progress-container {
+            width: 80%;
+            height: 12px;
+            background: #333;
+            border-radius: 6px;
+            margin: 10px auto;
+            position: relative;
+            border: 1px solid #fff;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: #f1c40f;
+            width: 0%;
+        }
+
+        #boss-icon {
+            position: absolute;
+            right: 5px;
+            top: -2px;
+            font-size: 12px;
+            color: red;
+        }
+
+        #coin-display {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            color: gold;
+            font-family: 'Fredoka One', cursive;
+            font-size: 20px;
+            text-shadow: 2px 2px 0px #000;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            color: white;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+
+        .hidden { display: none !important; }
+
+        h1 {
+            font-family: 'Fredoka One', cursive;
+            font-size: 40px;
+            color: #ffcc00;
+            text-shadow: 4px 4px 0 #d35400;
+            margin-bottom: 20px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .btn {
+            background: linear-gradient(to bottom, #3498db, #2980b9);
+            border: none;
+            border-radius: 12px;
+            padding: 15px 40px;
+            color: white;
+            font-size: 18px;
+            font-family: 'Fredoka One', cursive;
+            cursor: pointer;
+            margin: 10px;
+            box-shadow: 0 5px 0 #1a5276;
+            transition: transform 0.1s;
+            text-transform: uppercase;
+        }
+
+        .btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 0 0 #1a5276;
+        }
+
+        .btn-disabled {
+            background: #7f8c8d;
+            box-shadow: 0 5px 0 #555;
+            cursor: not-allowed;
+            opacity: 0.7;
+            transform: none !important;
+        }
+
+        .char-scroll-view {
+            width: 100%;
+            overflow-x: auto;
+            padding: 20px 0;
+        }
+
+        .char-container {
+            display: flex;
+            gap: 20px;
+            padding: 0 20px;
+            justify-content: center;
+            min-width: max-content;
+        }
+
+        .char-card {
+            background: #444;
+            border: 3px solid #666;
+            border-radius: 15px;
+            padding: 15px;
+            width: 140px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .char-card.selected {
+            border-color: #f1c40f;
+            background: #555;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(241, 196, 15, 0.4);
+        }
+
+        .char-preview {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 10px auto;
+            background-repeat: no-repeat;
+            background-size: cover; 
+            image-rendering: pixelated;
+        }
+
+        #levelup-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        @media (min-width: 768px) {
+            #levelup-container {
+                flex-direction: row;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+        }
+
+        .upgrade-card {
+            background: #ecf0f1;
+            color: #2c3e50;
+            width: 240px;
+            padding: 15px;
+            border-radius: 12px;
+            border: 4px solid #bdc3c7;
+            cursor: pointer;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+
+        .upgrade-card:hover { transform: translateY(-5px); border-color: #3498db; }
+        .upgrade-card:active { transform: scale(0.98); }
+
+        .card-title { font-weight: bold; font-size: 18px; margin-bottom: 5px; color: #2c3e50; }
+        .card-desc { font-size: 13px; color: #555; margin-bottom: 10px; line-height: 1.4; }
+        .stars { color: #f1c40f; font-size: 20px; letter-spacing: 2px; }
+        .red-star { color: #e74c3c; text-shadow: 0 0 5px #e67e22; font-size: 20px; letter-spacing: 2px; }
+
+        #joystick-zone {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            z-index: 50;
+            touch-action: none;
+            pointer-events: auto;
+        }
+
+        #loading-text { font-size: 20px; color: white; font-family: 'Fredoka One'; margin-top: 20px;}
+        .spinner {
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top: 5px solid #f1c40f;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="ui-layer">
+        <div id="hud">
+            <div id="coin-display">
+                <span>🪙</span>
+                <span id="coin-count">0</span>
+            </div>
+            <div id="progress-container">
+                <div id="progress-fill"></div>
+                <div id="boss-icon">☠️</div>
+            </div>
+            
+            <div class="bar-container">
+                <div id="hp-bar" class="bar-fill"></div>
+                <div class="bar-text">HP <span id="hp-text">100/100</span></div>
+            </div>
+            <div class="bar-container" style="height: 8px; margin-top: 4px; background: #222;">
+                <div id="exp-bar" class="bar-fill"></div>
+            </div>
+            <div style="text-align:center; color:white; font-size:14px; margin-top:5px; font-weight:bold; text-shadow:1px 1px 0 #000;">
+                LVL <span id="level-text">1</span>
+            </div>
+        </div>
+        
+        <div id="joystick-zone"></div>
+    </div>
+
+    <div id="screen-loading" class="screen">
+        <div class="spinner"></div>
+        <div id="loading-text">Mempersiapkan Pusaka...</div>
+    </div>
+
+    <div id="screen-menu" class="screen hidden">
+        <h1>PENJAGA<br>NUSANTARA</h1>
+        <div class="char-scroll-view">
+            <div class="char-container" id="char-select-container"></div>
+        </div>
+        <div style="margin-top: 15px; color: gold; font-size: 18px; font-family: 'Fredoka One';">
+            KAS: <span id="menu-coins">0</span> 🪙
+        </div>
+        <button class="btn" id="btn-start">MULAI PERJUANGAN</button>
+        <p style="font-size: 12px; opacity: 0.6; margin-top:10px;">Versi 9.6 - Big Grass Tile</p>
+    </div>
+
+    <div id="screen-levelup" class="screen hidden">
+        <h2 style="color: #f1c40f; text-shadow: 3px 3px 0 #000; font-family:'Fredoka One'; font-size:32px; margin-bottom: 20px;">WARISAN LELUHUR</h2>
+        <div id="levelup-container"></div>
+    </div>
+
+    <div id="screen-gameover" class="screen hidden">
+        <h1 style="color: #e74c3c;">GUGUR</h1>
+        <p style="font-size:18px;">Perjuangan belum berakhir!</p>
+        <p style="font-size:24px; color:gold; margin: 20px 0;">Koin Didapat: <span id="end-coins">0</span></p>
+        <button class="btn" onclick="backToMenu()">KEMBALI KE MARKAS</button>
+    </div>
+
+    <div id="screen-victory" class="screen hidden">
+        <h1 style="color: #2ecc71;">MERDEKA!</h1>
+        <p style="font-size:18px;">Nusantara telah aman.</p>
+        <p style="font-size:24px; color:gold; margin: 20px 0;">Koin Didapat: <span id="vic-coins">0</span></p>
+        <button class="btn" onclick="backToMenu()">KEMBALI KE MARKAS</button>
+    </div>
+
+    <script>
+        const CANVAS = document.getElementById('gameCanvas');
+        const CTX = CANVAS.getContext('2d');
+        const BASE_URL = "https://raw.githubusercontent.com/CodiRa-id/penjaga-nusantara/main/";
+
+        const ASSETS_CONFIG = {
+            gatotkaca: { src: "gatotkaca.png", frames: 3 },
+            arjuna: { src: "arjuna.png", frames: 3 },
+            anoman: { src: "anoman.png", frames: 3 },
+            begal: { src: "begal.png", frames: 3 },
+            pencuri: { src: "maling.png", frames: 3 },
+            penjajah: { src: "penjajah.png", frames: 3 },
+            butoijo: { src: "butoijo.png", frames: 3 },
+            barong: { src: "barong.png", frames: 3 },
+            koruptor: { src: "koruptor.png", frames: 4 },
+            gada: { src: "gada.png", frames: 4 },
+            gada_ev: { src: "gada-ev.png", frames: 4 },
+            gelombang: { src: "gelombangsuara.png", frames: 6 },
+            gelombang_ev: { src: "gelombangsuara-ev.png", frames: 6 },
+            hujan: { src: "hujanpanah.png", frames: 3 },
+            hujan_ev: { src: "hujanpanah-ev.png", frames: 3 },
+            listrik: { src: "listrik.png", frames: 6 },
+            listrik_ev: { src: "listrik-ev.png", frames: 6 },
+            retakan: { src: "retakanbumi.png", frames: 6 },
+            retakan_ev: { src: "retakanbumi-ev.png", frames: 6 },
+            panah: { src: "anakpanah.png", frames: 1 },
+            panah_ev: { src: "anakpanah-ev.png", frames: 1 },
+            keris: { src: "keris.png", frames: 1 },
+            keris_ev: { src: "keris-ev.png", frames: 1 },
+            rumput: { src: "rumput.png", frames: 1 }
+        };
+
+        const IMAGES = {};
+        let assetsLoadedCount = 0;
+        const totalAssets = Object.keys(ASSETS_CONFIG).length;
+
+        const CHARACTERS = [
+            { id: 'arjuna', name: 'Arjuna', price: 0, hp: 120, speed: 4.5, desc: "Pemanah Tanpa Meleset", unlocked: true },
+            { id: 'gatotkaca', name: 'Gatotkaca', price: 500, hp: 200, speed: 3.5, desc: "Otot Kawat Balung Besi", unlocked: false },
+            { id: 'anoman', name: 'Anoman', price: 100, hp: 150, speed: 4.2, desc: "Kera Putih Perkasa", unlocked: false }
+        ];
+
+        let gameState = "LOADING"; 
+        let animationFrameId;
+        let enemyIdCounter = 0;
+        let selectedCharId = 'arjuna'; 
+        
+        let player = null;
+        let enemies = [];
+        let items = [];
+        let damageTexts = [];
+        let projectiles = [];
+        let gameTime = 0;
+        let frameCount = 0;
+        let spawnTimer = 0;
+        let sessionCoins = 0;
+        const MAP_SIZE = 2500; 
+        
+        let savedData = { coins: 0, unlocked: ['arjuna'] };
+        try {
+            const loaded = JSON.parse(localStorage.getItem('penjagaNusantaraDataV8')); 
+            if(loaded) savedData = loaded;
+        } catch(e) { console.error("Save data error", e); }
+        
+        let joystick = { active: false, baseX: 0, baseY: 0, x: 0, y: 0, dx: 0, dy: 0, angle: 0 };
+        const JOYSTICK_RADIUS = 60;
+        let defaultJoyX = window.innerWidth / 2;
+        let defaultJoyY = window.innerHeight - 100;
+
+        const SKILLS = {
+            keris: { name: "Keris Pusaka", type: "active", owner: "gatotkaca", desc: "Berputar melindungi tubuh.", maxLevel: 3 },
+            listrik: { name: "Aura Ksatria", type: "active", owner: "gatotkaca", desc: "Area listrik permanen.", maxLevel: 3 },
+            retakan: { name: "Hantaman Bumi", type: "active", owner: "gatotkaca", desc: "Area damage di tanah.", maxLevel: 3 },
+            panah: { name: "Panah Pasopati", type: "active", owner: "arjuna", desc: "Tembak. Evo: Tembus.", maxLevel: 3 },
+            hujan: { name: "Hujan Panah", type: "active", owner: "arjuna", desc: "Hujan area acak.", maxLevel: 3 },
+            gelombang: { name: "Gema Suara", type: "active", owner: "arjuna", desc: "Aura suara permanen.", maxLevel: 3 },
+            gada: { name: "Gada Rujakpala", type: "active", owner: "anoman", desc: "Lempar gada tembus.", maxLevel: 3 },
+            clone: { name: "Bayangan", type: "active", owner: "anoman", desc: "Panggil kembaran.", maxLevel: 3 }, 
+            besar: { name: "Tiwikrama", type: "active", owner: "anoman", desc: "Ukuran & HP naik.", maxLevel: 3 },
+            speed: { name: "Langkah Angin", type: "passive", owner: "all", desc: "Gerak lebih gesit.", maxLevel: 3 },
+            might: { name: "Tenaga Dalam", type: "passive", owner: "all", desc: "Damage meningkat.", maxLevel: 3 },
+            regen: { name: "Penyembuhan", type: "passive", owner: "all", desc: "Pulihkan HP perlahan.", maxLevel: 3 },
+            magnet: { name: "Penyedotan", type: "passive", owner: "all", desc: "Jangkauan ambil luas.", maxLevel: 3 },
+            haste: { name: "Serangan Kilat", type: "passive", owner: "all", desc: "Attack Speed +10%", maxLevel: 3 }
+        };
+
+        // --- HELPER FUNCTIONS ---
+        function getNearestEnemy(x, y) {
+            if(!x && player) x = player.x; 
+            if(!y && player) y = player.y;
+            if(!player) return null;
+
+            let nearest = null;
+            let minD = 99999;
+            enemies.forEach(e => {
+                let d = (x - e.x)**2 + (y - e.y)**2;
+                if(d < minD) { minD = d; nearest = e; }
+            });
+            return nearest;
+        }
+        
+        function getDensestEnemyPoint(radius) {
+            if (enemies.length === 0) return {x: player.x, y: player.y};
+            
+            let bestX = player.x;
+            let bestY = player.y;
+            let maxCount = -1;
+            
+            let step = enemies.length > 50 ? 3 : 1;
+
+            for (let i = 0; i < enemies.length; i += step) {
+                let e = enemies[i];
+                let count = 0;
+                for (let j = 0; j < enemies.length; j += step) {
+                    let other = enemies[j];
+                    let d = (e.x - other.x)**2 + (e.y - other.y)**2;
+                    if (d < radius * radius) {
+                        count++;
+                    }
+                }
+                
+                if (count > maxCount) {
+                    maxCount = count;
+                    bestX = e.x;
+                    bestY = e.y;
+                }
+            }
+            return {x: bestX, y: bestY};
+        }
+
+        function getCooldown(id) {
+            switch(id) {
+                case 'keris': return 300;
+                case 'listrik': return 20; 
+                case 'retakan': return 120;
+                case 'panah': return 30;
+                case 'hujan': return 300;
+                case 'gelombang': return 20; 
+                case 'gada': return 45; 
+                case 'clone': return 300; 
+                default: return 600;
+            }
+        }
+
+        function canHitEnemy(proj, enemyId, cooldown) {
+            if (!proj.hitRecords[enemyId]) return true;
+            return (frameCount - proj.hitRecords[enemyId]) > cooldown;
+        }
+
+        function registerHit(proj, enemyId) {
+            proj.hitRecords[enemyId] = frameCount;
+        }
+
+        function drawSprite(assetObj, x, y, w, h, frameIndex, flipH, centered = true) {
+            if (!assetObj || !assetObj.img) return; 
+            let frameWidth = assetObj.img.width / assetObj.frames;
+            let frameHeight = assetObj.img.height;
+            let sx = frameIndex * frameWidth;
+            CTX.save();
+            CTX.translate(x, y);
+            if (flipH) CTX.scale(-1, 1);
+            let dx = centered ? -w/2 : 0;
+            let dy = centered ? -h/2 : 0;
+            try { CTX.drawImage(assetObj.img, sx, 0, frameWidth, frameHeight, dx, dy, w, h); } catch (e) {}
+            CTX.restore();
+        }
+
+        function createDamageText(x, y, text, color) {
+            damageTexts.push({x, y, val: text, color, life: 40});
+        }
+
+        function spawnBoss(type) {
+            let boss = new Enemy('boss', player.x + 300, player.y);
+            boss.assetKey = type; 
+            boss.assetConfig = IMAGES[type];
+            boss.bossType = type;
+            enemies.push(boss);
+            createDamageText(player.x, player.y - 100, "BOSS DATANG!", "red");
+        }
+
+        function spawnEnemy() {
+            let angle = Math.random() * Math.PI * 2;
+            let dist = Math.max(CANVAS.width, CANVAS.height)/2 + 200; 
+            let x = player.x + Math.cos(angle) * dist;
+            let y = player.y + Math.sin(angle) * dist;
+            enemies.push(new Enemy('normal', x, y));
+        }
+
+        function hitCheckOneTime(proj, r, dmg) {
+            for(let i=0; i<enemies.length; i++) {
+                let e = enemies[i];
+                let dx = proj.x - e.x;
+                let dy = proj.y - e.y;
+                if (Math.sqrt(dx*dx + dy*dy) < r + e.size/2) {
+                    e.takeDamage(dmg);
+                    proj.dead = true; 
+                    break; 
+                }
+            }
+        }
+
+        function hitCheckCooldown(proj, r, dmg, cooldownFrames) {
+            enemies.forEach(e => {
+                let dx = proj.x - e.x;
+                let dy = proj.y - e.y;
+                if (Math.sqrt(dx*dx + dy*dy) < r + e.size/2) {
+                    if (canHitEnemy(proj, e.id, cooldownFrames)) {
+                        e.takeDamage(dmg);
+                        registerHit(proj, e.id);
+                    }
+                }
+            });
+        }
+
+        function hitCheckArea(proj, r, dmg) {
+            enemies.forEach(e => {
+                let dx = proj.x - e.x;
+                let dy = proj.y - e.y;
+                if (Math.sqrt(dx*dx + dy*dy) < r + e.size/2) e.takeDamage(dmg);
+            });
+        }
+
+        // --- CLASSES ---
+
+        class Player {
+            constructor(data) {
+                this.id = data.id;
+                this.x = 0;
+                this.y = 0;
+                this.maxHp = data.hp;
+                this.hp = data.hp;
+                this.speed = data.speed;
+                this.exp = 0;
+                this.level = 1;
+                this.nextLevelExp = 100;
+                this.skills = {}; 
+                this.modifiers = { damage: 1, speed: 1, area: 1, cooldown: 1, attackSpeed: 1 };
+                this.assetConfig = IMAGES[data.id];
+                this.facingRight = true;
+                this.animTimer = 0;
+                this.currentFrame = 0;
+            }
+
+            update() {
+                let moveSpd = this.speed * this.modifiers.speed;
+                if (joystick.active) {
+                    this.x += Math.cos(joystick.angle) * moveSpd;
+                    this.y += Math.sin(joystick.angle) * moveSpd;
+                    if (Math.abs(joystick.dx) > 5) this.facingRight = joystick.dx > 0;
+
+                    this.animTimer++;
+                    if (this.animTimer > 10) { 
+                        this.currentFrame = (this.currentFrame + 1) % this.assetConfig.frames;
+                        this.animTimer = 0;
+                    }
+                } else {
+                    this.currentFrame = 0; 
+                }
+
+                this.x = Math.max(-MAP_SIZE, Math.min(MAP_SIZE, this.x));
+                this.y = Math.max(-MAP_SIZE, Math.min(MAP_SIZE, this.y));
+
+                for (let k in this.skills) {
+                    let s = this.skills[k];
+                    if (s.timer > 0) s.timer--;
+                    else {
+                        this.triggerSkill(k, s);
+                        let baseCD = (k === 'listrik' || k === 'gelombang') ? 15 : getCooldown(k);
+                        s.timer = baseCD / this.modifiers.attackSpeed;
+                    }
+                }
+
+                if (this.skills.regen && frameCount % 60 === 0) {
+                    this.heal(this.skills.regen.level * 2);
+                }
+
+                document.getElementById('hp-bar').style.width = (this.hp / this.maxHp * 100) + "%";
+                document.getElementById('hp-text').innerText = Math.floor(this.hp) + "/" + this.maxHp;
+                document.getElementById('exp-bar').style.width = (this.exp / this.nextLevelExp * 100) + "%";
+                document.getElementById('level-text').innerText = this.level;
+            }
+
+            draw() {
+                let size = 64;
+                if (this.skills.besar) size += (this.skills.besar.level * 15);
+                drawSprite(this.assetConfig, this.x, this.y, size, size, this.currentFrame, !this.facingRight);
+            }
+
+            triggerSkill(id, skill) {
+                let lvl = skill.level;
+                let isEvo = lvl >= 3;
+                let baseDmg = 35; 
+                let dmg = baseDmg * lvl * this.modifiers.damage;
+                let atkSpd = this.modifiers.attackSpeed;
+
+                switch(id) {
+                    case 'keris':
+                        let targetCount = (lvl === 1) ? 1 : (lvl === 2 ? 2 : 4);
+                        let existing = projectiles.filter(p => p.type === 'keris' && !p.dead);
+                        if (existing.length < targetCount) {
+                            projectiles = projectiles.filter(p => p.type !== 'keris');
+                            for(let i=0; i < targetCount; i++) {
+                                projectiles.push(new Projectile('keris', this.x, this.y, {
+                                    orbit: true,
+                                    duration: 999999, 
+                                    dmg: dmg * 1.5,
+                                    angleOffset: (Math.PI*2/targetCount) * i,
+                                    spriteKey: isEvo ? 'keris_ev' : 'keris'
+                                }));
+                            }
+                        }
+                        break;
+
+                    case 'listrik':
+                        let auraL = projectiles.find(p => p.type === 'aura_listrik' && !p.dead);
+                        let spriteL = isEvo ? 'listrik_ev' : 'listrik';
+                        if (!auraL) {
+                            auraL = new Projectile('aura_listrik', this.x, this.y, { duration: 999999, spriteKey: spriteL, isAnim: true });
+                            projectiles.push(auraL);
+                        } else if (auraL.opts.spriteKey !== spriteL) {
+                            auraL.opts.spriteKey = spriteL;
+                            auraL.assetConfig = IMAGES[spriteL];
+                        }
+                        let rL = 50 + (lvl * 25) + (isEvo?40:0);
+                        auraL.opts.radiusX = rL; auraL.opts.radiusY = rL;
+                        
+                        enemies.forEach(e => {
+                            let dist = Math.sqrt((e.x-this.x)**2 + (e.y-this.y)**2);
+                            if (dist < rL + e.size/2 && canHitEnemy(auraL, e.id, 15 / atkSpd)) {
+                                e.takeDamage(dmg); registerHit(auraL, e.id);
+                            }
+                        });
+                        break;
+
+                    case 'gelombang':
+                        let auraG = projectiles.find(p => p.type === 'aura_gelombang' && !p.dead);
+                        let spriteG = isEvo ? 'gelombang_ev' : 'gelombang'; 
+                        
+                        if (!auraG) {
+                            auraG = new Projectile('aura_gelombang', this.x, this.y, {
+                                duration: 999999, spriteKey: spriteG, isAnim: true
+                            });
+                            projectiles.push(auraG);
+                        } else if (auraG.opts.spriteKey !== spriteG) {
+                            auraG.opts.spriteKey = spriteG;
+                            auraG.assetConfig = IMAGES[spriteG];
+                        }
+                        
+                        let rG = 80 + (lvl * 30); 
+                        if(isEvo) rG += 50;
+                        auraG.opts.radiusX = rG; 
+                        auraG.opts.radiusY = rG;
+
+                        enemies.forEach(e => {
+                            let dist = Math.sqrt((e.x-this.x)**2 + (e.y-this.y)**2);
+                            if (dist < rG + e.size/2 && canHitEnemy(auraG, e.id, 15 / atkSpd)) { 
+                                e.takeDamage(dmg * 0.5); 
+                                registerHit(auraG, e.id);
+                                let pushForce = 15; 
+                                let angle = Math.atan2(e.y - this.y, e.x - this.x);
+                                e.x += Math.cos(angle) * pushForce;
+                                e.y += Math.sin(angle) * pushForce;
+                            }
+                        });
+                        break;
+
+                    case 'retakan':
+                        let areaSize = 100 + (lvl * 50); 
+                        projectiles.push(new Projectile('zone', this.x, this.y, {
+                            duration: 120, dmg: dmg * 2.0, spriteKey: isEvo ? 'retakan_ev' : 'retakan',
+                            isFloor: true, isAnim: true, loop: false, customSize: areaSize
+                        }));
+                        break;
+
+                    case 'panah':
+                        let target = getNearestEnemy();
+                        if (target) {
+                            let angle = Math.atan2(target.y - this.y, target.x - this.x);
+                            let pType = isEvo ? 'piercing_bullet' : 'bullet';
+                            projectiles.push(new Projectile(pType, this.x, this.y, {
+                                vx: Math.cos(angle) * 12, vy: Math.sin(angle) * 12, dmg: dmg,
+                                duration: 60, rotation: angle, spriteKey: isEvo ? 'panah_ev' : 'panah'
+                            }));
+                        }
+                        break;
+                    case 'hujan':
+                        let rainRadius = 120;
+                        let bestPos = getDensestEnemyPoint(rainRadius);
+                        
+                        projectiles.push(new Projectile('spawner_hujan', bestPos.x, bestPos.y, {
+                            duration: 120, 
+                            dmg: dmg * 1.5, 
+                            isEvo: isEvo,
+                            radius: rainRadius, 
+                            spriteKey: isEvo ? 'hujan_ev' : 'hujan',
+                            isAnim: true 
+                        }));
+                        break;
+                    case 'gada':
+                        let closest = getNearestEnemy();
+                        let throwAngle = closest ? Math.atan2(closest.y - this.y, closest.x - this.x) : (Math.random()*Math.PI*2);
+                        
+                        let gadaCount = isEvo ? 3 : (lvl >= 2 ? 2 : 1);
+                        
+                        for(let i=0; i<gadaCount; i++) {
+                            let offset = 0;
+                            if (gadaCount === 2) offset = (i === 0 ? -0.2 : 0.2); 
+                            if (gadaCount === 3) offset = (i - 1) * 0.4; 
+                            
+                            projectiles.push(new Projectile('gada_throw', this.x, this.y, {
+                                vx: Math.cos(throwAngle+offset) * 10, vy: Math.sin(throwAngle+offset) * 10,
+                                dmg: dmg * 1.5, duration: 100, spriteKey: isEvo ? 'gada_ev' : 'gada'
+                            }));
+                        }
+                        break;
+                    case 'clone':
+                        let cloneCount = isEvo ? 3 : lvl;
+                        for(let i=0; i<cloneCount; i++) {
+                            let offX = (Math.random() * 60) - 30;
+                            let offY = (Math.random() * 60) - 30;
+                            projectiles.push(new Projectile('clone', this.x + offX, this.y + offY, {
+                                duration: 600, 
+                                dmg: dmg * 0.8, 
+                                spriteKey: 'anoman', 
+                                isAnim: false,
+                                isEvo: isEvo 
+                            }));
+                        }
+                        break;
+                }
+            }
+
+            gainExp(amount) {
+                this.exp += amount;
+                if (this.exp >= this.nextLevelExp) {
+                    this.exp -= this.nextLevelExp;
+                    this.nextLevelExp = Math.floor(this.nextLevelExp * 1.3);
+                    this.level++;
+                    gameState = "LEVELUP";
+                    showLevelUp();
+                }
+            }
+
+            addSkill(id) {
+                if (!this.skills[id]) {
+                    this.skills[id] = { level: 1, timer: 0, cooldown: getCooldown(id) };
+                } else {
+                    this.skills[id].level++;
+                }
+                if (id === 'keris') {
+                    projectiles = projectiles.filter(p => p.type !== 'keris');
+                    this.triggerSkill('keris', this.skills['keris']);
+                }
+                if (id === 'speed') this.modifiers.speed += 0.1;
+                if (id === 'might') this.modifiers.damage += 0.15;
+                if (id === 'haste') this.modifiers.attackSpeed += 0.1;
+                if (id === 'besar') {
+                    this.maxHp += 50; 
+                    this.heal(50); 
+                }
+            }
+            
+            takeDamage(amt) {
+                this.hp -= amt;
+                createDamageText(this.x, this.y - 40, `-${Math.floor(amt)}`, '#e74c3c');
+                if (this.hp <= 0) endGame(false);
+            }
+            
+            heal(amt) {
+                this.hp = Math.min(this.hp + amt, this.maxHp); 
+                createDamageText(this.x, this.y - 40, `+${Math.floor(amt)}`, '#2ecc71');
+            }
+        }
+
+        class Enemy {
+            constructor(type, x, y) {
+                this.id = ++enemyIdCounter;
+                this.x = x;
+                this.y = y;
+                this.dead = false;
+                this.type = type; 
+                this.animTimer = 0;
+                this.currentFrame = 0;
+                this.facingRight = x < player.x;
+
+                if (type === 'boss') {
+                    this.maxHp = 3000 + (gameTime * 50);
+                    this.hp = this.maxHp;
+                    this.size = 100;
+                    this.dmg = 30;
+                    this.speed = 1.5;
+                } else {
+                    this.maxHp = 30 + (gameTime * 1.5);
+                    this.hp = this.maxHp;
+                    this.size = 48;
+                    this.dmg = 8;
+                    this.speed = 1.2 + Math.random() * 0.8;
+                    let keys = ['begal', 'pencuri', 'penjajah', 'butoijo'];
+                    this.assetKey = keys[Math.floor(Math.random()*keys.length)];
+                }
+                if (!this.assetKey) this.assetKey = 'butoijo'; 
+                this.assetConfig = IMAGES[this.assetKey];
+            }
+
+            update() {
+                let dx = player.x - this.x;
+                let dy = player.y - this.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+
+                if (dist > 0) {
+                    this.x += (dx/dist) * this.speed;
+                    this.y += (dy/dist) * this.speed;
+                    this.facingRight = dx > 0;
+                }
+
+                if (dist < 40) {
+                    player.takeDamage(this.dmg / 60); 
+                }
+
+                this.animTimer++;
+                if (this.animTimer > 8) {
+                    this.currentFrame = (this.currentFrame + 1) % this.assetConfig.frames;
+                    this.animTimer = 0;
+                }
+            }
+
+            draw() {
+                drawSprite(this.assetConfig, this.x, this.y, this.size, this.size, this.currentFrame, !this.facingRight);
+                
+                if (this.type === 'boss') {
+                    let hpPercent = Math.max(0, this.hp / this.maxHp);
+                    CTX.fillStyle = 'black';
+                    CTX.fillRect(this.x - 40, this.y - this.size, 80, 8); 
+                    CTX.fillStyle = '#e74c3c';
+                    CTX.fillRect(this.x - 40, this.y - this.size, 80 * hpPercent, 8);
+                }
+            }
+
+            takeDamage(val) {
+                this.hp -= val;
+                createDamageText(this.x, this.y - this.size/2, Math.floor(val), 'white');
+                if (this.hp <= 0) {
+                    this.dead = true;
+                    let isBoss = this.type === 'boss';
+                    items.push({
+                        x: this.x, y: this.y, 
+                        type: 'exp', 
+                        val: isBoss ? 500 : 10
+                    });
+                    
+                    if (Math.random() < 0.3 || isBoss) {
+                        items.push({
+                            x: this.x + (Math.random()*20-10), y: this.y + (Math.random()*20-10),
+                            type: 'coin',
+                            val: isBoss ? 50 : 1
+                        });
+                    }
+                }
+            }
+        }
+
+        class Projectile {
+            constructor(type, x, y, opts) {
+                this.type = type;
+                this.x = x;
+                this.y = y;
+                this.opts = opts;
+                this.timer = 0;
+                this.dead = false;
+                this.currentFrame = 0;
+                this.animTimer = 0;
+                this.assetConfig = opts.spriteKey ? IMAGES[opts.spriteKey] : null;
+                this.hitRecords = {}; 
+                
+                this.target = null;
+                this.hp = 50; 
+                this.facingRight = true;
+                this.animFinished = false;
+                
+                // Clone Skill Timer
+                this.skillTimer = 0;
+            }
+
+            update() {
+                this.timer++;
+                if (this.opts.duration && this.timer > this.opts.duration) this.dead = true;
+
+                if (this.opts.isAnim && this.assetConfig) {
+                    if (this.type === 'spawner_hujan') {
+                        if (!this.animFinished) {
+                            if (this.timer % 10 === 0) { 
+                                if (this.currentFrame < this.assetConfig.frames - 1) {
+                                    this.currentFrame++;
+                                } else {
+                                    // REWORK: Hit All on last frame
+                                    this.animFinished = true; 
+                                    let r = this.opts.radius || 120;
+                                    hitCheckArea(this, r, this.opts.dmg); 
+                                    this.dead = true; // Remove visual immediately
+                                }
+                            }
+                        }
+                    } else {
+                        if (this.timer % 5 === 0) {
+                             if (this.opts.loop === false) {
+                                 if (this.currentFrame < this.assetConfig.frames - 1) this.currentFrame++;
+                             } else {
+                                 this.currentFrame = (this.currentFrame + 1) % this.assetConfig.frames;
+                             }
+                        }
+                    }
+                }
+
+                if (this.type === 'bullet') {
+                    this.x += this.opts.vx;
+                    this.y += this.opts.vy;
+                    hitCheckOneTime(this, 20, this.opts.dmg);
+                }
+                else if (this.type === 'piercing_bullet') {
+                    this.x += this.opts.vx;
+                    this.y += this.opts.vy;
+                    hitCheckCooldown(this, 20, this.opts.dmg, 20);
+                }
+                else if (this.type === 'gada_throw') {
+                    this.x += this.opts.vx;
+                    this.y += this.opts.vy;
+                    this.rotation = (this.timer * 0.5);
+                    hitCheckCooldown(this, 40, this.opts.dmg, 30);
+                }
+                else if (this.type === 'keris' && this.opts.orbit) {
+                    let angle = (frameCount / 20) + this.opts.angleOffset;
+                    this.x = player.x + Math.cos(angle) * 80;
+                    this.y = player.y + Math.sin(angle) * 80;
+                    this.rotation = angle; 
+                    hitCheckCooldown(this, 30, this.opts.dmg, 30);
+                }
+                else if (this.type === 'aura_listrik' || this.type === 'aura_gelombang') {
+                    this.x = player.x;
+                    this.y = player.y;
+                }
+                else if (this.type === 'zone') {
+                    let r = (this.opts.customSize || 100) / 2;
+                    if (this.timer % 60 === 0) hitCheckArea(this, r, this.opts.dmg);
+                }
+                else if (this.type === 'aoe_grow') {
+                    let r = (this.timer / this.opts.duration) * 150;
+                    hitCheckCooldown(this, r, this.opts.dmg, 20);
+                }
+                else if (this.type === 'melee_swing' && this.opts.followPlayer) {
+                    this.x = player.x;
+                    this.y = player.y;
+                    hitCheckCooldown(this, 100, this.opts.dmg, 10);
+                }
+                else if (this.type === 'spawner_hujan') {
+                    // Logic moved to anim update
+                }
+                else if (this.type === 'clone') {
+                    // CLONE AI
+                    if (!this.target || this.target.dead) {
+                        this.target = getNearestEnemy(this.x, this.y);
+                    }
+                    if (this.target) {
+                        let dx = this.target.x - this.x;
+                        let dy = this.target.y - this.y;
+                        let dist = Math.sqrt(dx*dx + dy*dy);
+                        if (dist > 50) { 
+                            this.x += (dx/dist) * 3;
+                            this.y += (dy/dist) * 3;
+                            this.facingRight = dx > 0;
+                        }
+                    }
+                    
+                    // Clone uses Skill (Gada Throw)
+                    this.skillTimer++;
+                    if (this.skillTimer > 120) { // Every 2 seconds
+                        this.skillTimer = 0;
+                        let target = getNearestEnemy(this.x, this.y);
+                        if (target) {
+                            let angle = Math.atan2(target.y - this.y, target.x - this.x);
+                            // Clone spawns projectile
+                            // Clone damage is derived from its own opts.dmg
+                            projectiles.push(new Projectile('gada_throw', this.x, this.y, {
+                                vx: Math.cos(angle) * 10, vy: Math.sin(angle) * 10,
+                                dmg: this.opts.dmg * 0.8, // Slightly weaker than clone contact
+                                duration: 80,
+                                spriteKey: this.opts.isEvo ? 'gada_ev' : 'gada'
+                            }));
+                        }
+                    }
+
+                    if (frameCount % 10 === 0) {
+                        this.currentFrame = (this.currentFrame + 1) % this.assetConfig.frames;
+                    }
+                }
+            }
+
+            draw() {
+                if (this.type === 'spawner_hujan') {
+                    let size = (this.opts.radius || 120) * 2;
+                    CTX.save();
+                    CTX.translate(this.x, this.y);
+                    
+                    CTX.beginPath(); 
+                    CTX.arc(0, 0, this.opts.radius, 0, Math.PI*2);
+                    CTX.fillStyle = 'rgba(231, 76, 60, 0.25)'; 
+                    CTX.fill();
+                    CTX.strokeStyle = 'rgba(192, 57, 43, 0.8)'; 
+                    CTX.lineWidth = 3;
+                    CTX.stroke();
+
+                    if (this.assetConfig) {
+                        drawSprite(this.assetConfig, 0, -20, size, size, this.currentFrame, false, true);
+                    }
+                    
+                    CTX.restore();
+                    return; 
+                }
+
+                if (this.assetConfig) {
+                    let w = 50, h = 50;
+                    if (this.opts.scaleMax) {
+                        let s = 50 * (1 + (this.timer/this.opts.duration));
+                        w = s; h = s;
+                    }
+                    if (this.opts.customSize) { w = this.opts.customSize; h = this.opts.customSize; }
+                    
+                    if (this.type === 'aura_listrik' || this.type === 'aura_gelombang') {
+                        w = (this.opts.radiusX || 75) * 2;
+                        h = (this.opts.radiusY || 50) * 2;
+                    }
+                    
+                    CTX.save();
+                    CTX.translate(this.x, this.y);
+                    if (this.opts.rotation) CTX.rotate(this.opts.rotation);
+                    if (this.type === 'melee_swing') CTX.rotate(this.timer * 0.3);
+                    if (this.type === 'gada_throw') CTX.rotate(this.rotation); 
+                    
+                    if (this.type === 'keris') {
+                        CTX.rotate(this.rotation + (-145 * Math.PI / 180));
+                    }
+                    
+                    if (this.type === 'aura_gelombang') {
+                        CTX.globalAlpha = 0.5 + Math.sin(frameCount * 0.1) * 0.3; 
+                    }
+
+                    if (this.type === 'clone') {
+                        CTX.globalAlpha = 0.7;
+                        drawSprite(this.assetConfig, 0, 0, 64, 64, this.currentFrame, !this.facingRight, true);
+                        CTX.globalAlpha = 1.0;
+                    } else {
+                        drawSprite(this.assetConfig, 0, 0, w, h, this.currentFrame, false, true);
+                    }
+                    
+                    CTX.restore();
+                }
+            }
+        }
+
+        // --- GLOBAL FUNCTIONS ---
+
+        function loadAssets() {
+            let loaded = 0;
+            for (let key in ASSETS_CONFIG) {
+                let img = new Image();
+                img.crossOrigin = "Anonymous"; 
+                img.src = BASE_URL + ASSETS_CONFIG[key].src;
+                
+                img.onload = () => {
+                    loaded++;
+                    checkLoad(loaded);
+                };
+                img.onerror = () => {
+                    loaded++;
+                    checkLoad(loaded);
+                };
+                IMAGES[key] = { img: img, frames: ASSETS_CONFIG[key].frames };
+            }
+        }
+
+        function checkLoad(count) {
+            if (count >= totalAssets) {
+                document.getElementById('screen-loading').classList.add('hidden');
+                document.getElementById('screen-menu').classList.remove('hidden');
+                initMenu();
+            }
+        }
+
+        function resize() {
+            CANVAS.width = window.innerWidth;
+            CANVAS.height = window.innerHeight;
+            CTX.imageSmoothingEnabled = false;
+            defaultJoyX = window.innerWidth / 2;
+            defaultJoyY = window.innerHeight - 120;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function initMenu() {
+            const container = document.getElementById('char-select-container');
+            container.innerHTML = '';
+            document.getElementById('menu-coins').innerText = savedData.coins;
+
+            CHARACTERS.forEach(char => {
+                let isUnlocked = savedData.unlocked.includes(char.id);
+                let div = document.createElement('div');
+                div.className = `char-card ${selectedCharId === char.id ? 'selected' : ''}`;
+                div.innerHTML = `
+                    <div class="char-preview" id="preview-${char.id}"></div>
+                    <div style="font-weight:bold; color:white; margin-bottom:5px;">${char.name}</div>
+                    <div style="font-size:11px; color:#bbb; min-height:30px;">${char.desc}</div>
+                    ${!isUnlocked ? `<button class="btn" style="padding:8px; width:100%; font-size:12px; margin:5px 0 0 0; background:gold; color:black;">Beli ${char.price}</button>` : ''}
+                `;
+                div.onclick = () => {
+                    if (isUnlocked) {
+                        selectedCharId = char.id;
+                        initMenu();
+                    } else {
+                        if (savedData.coins >= char.price) {
+                            savedData.coins -= char.price;
+                            savedData.unlocked.push(char.id);
+                            localStorage.setItem('penjagaNusantaraDataV8', JSON.stringify(savedData));
+                            initMenu();
+                        } else {
+                            alert("Koin tidak cukup!");
+                        }
+                    }
+                };
+                container.appendChild(div);
+                setTimeout(() => {
+                    const prevEl = document.getElementById(`preview-${char.id}`);
+                    if(prevEl && IMAGES[char.id]) {
+                        prevEl.style.backgroundImage = `url(${IMAGES[char.id].img.src})`;
+                        let frames = ASSETS_CONFIG[char.id].frames;
+                        prevEl.style.backgroundSize = `${frames * 100}% 100%`;
+                        prevEl.style.backgroundPosition = `0 0`;
+                    }
+                }, 10);
+            });
+
+            const startBtn = document.getElementById('btn-start');
+            if (savedData.unlocked.includes(selectedCharId)) {
+                startBtn.classList.remove('btn-disabled');
+                startBtn.onclick = startGame;
+            } else {
+                startBtn.classList.add('btn-disabled');
+                startBtn.onclick = null;
+            }
+        }
+
+        function startGame() {
+            gameState = "PLAYING";
+            document.getElementById('screen-menu').classList.add('hidden');
+            document.getElementById('hud').style.display = 'block';
+            
+            const charData = CHARACTERS.find(c => c.id === selectedCharId);
+            player = new Player(charData); 
+            
+            enemies = [];
+            projectiles = [];
+            items = [];
+            damageTexts = [];
+            gameTime = 0;
+            spawnTimer = 0;
+            frameCount = 0;
+            sessionCoins = 0;
+            enemyIdCounter = 0;
+            
+            if (player.id === 'gatotkaca') player.addSkill('keris');
+            if (player.id === 'arjuna') player.addSkill('panah');
+            if (player.id === 'anoman') player.addSkill('gada');
+
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            loop();
+        }
+
+        function backToMenu() {
+            document.getElementById('screen-gameover').classList.add('hidden');
+            document.getElementById('screen-victory').classList.add('hidden');
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('screen-menu').classList.remove('hidden');
+            gameState = "MENU";
+            initMenu(); 
+        }
+
+        function loop() {
+            if (gameState === "PLAYING") {
+                update();
+                draw();
+            }
+            animationFrameId = requestAnimationFrame(loop);
+        }
+
+        function update() {
+            frameCount++;
+            if (frameCount % 60 === 0) gameTime++;
+
+            let spawnRate = Math.max(5, 40 - Math.floor(gameTime / 2)); 
+            let maxEnemies = 30 + (gameTime * 2); 
+            if (gameTime > 60) maxEnemies = 150; 
+            if (gameTime > 120) maxEnemies = 300; 
+
+            const MAX_TIME = 180;
+            const progress = Math.min(gameTime / MAX_TIME, 1);
+            
+            document.getElementById('progress-fill').style.width = (progress * 100) + "%";
+            document.getElementById('coin-count').innerText = sessionCoins;
+
+            if (gameTime === 90 && !enemies.some(e => e.type === 'boss')) spawnBoss('barong');
+            if (gameTime === 175 && !enemies.some(e => e.type === 'boss' && e.bossType === 'koruptor')) spawnBoss('koruptor');
+
+            let spawnCount = 1;
+            if (gameTime > 60) spawnCount = 2;
+            if (gameTime > 120) spawnCount = 3;
+
+            if (spawnTimer++ > spawnRate && enemies.length < maxEnemies && progress < 1) {
+                for(let i=0; i<spawnCount; i++) spawnEnemy();
+                spawnTimer = 0;
+            }
+
+            player.update();
+            
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
+                e.update();
+                if (e.dead) enemies.splice(i, 1);
+            }
+
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                let p = projectiles[i];
+                p.update();
+                if (p.dead) projectiles.splice(i, 1);
+            }
+
+            let magnetLevel = player.skills.magnet ? player.skills.magnet.level : 0;
+            let pickupRange = 20 + (magnetLevel * 50); 
+            
+            for (let i = items.length - 1; i >= 0; i--) {
+                let item = items[i];
+                let dx = player.x - item.x;
+                let dy = player.y - item.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist < pickupRange) {
+                    item.x += (dx/dist) * 15; 
+                    item.y += (dy/dist) * 15;
+                }
+                
+                if (dist < 20) {
+                    if (item.type === 'exp') {
+                        player.gainExp(item.val);
+                    } else if (item.type === 'coin') {
+                        sessionCoins += item.val;
+                    }
+                    items.splice(i, 1);
+                }
+            }
+            
+            for (let i = damageTexts.length - 1; i >= 0; i--) {
+                damageTexts[i].life--;
+                damageTexts[i].y -= 0.5;
+                if (damageTexts[i].life <= 0) damageTexts.splice(i, 1);
+            }
+
+            if (progress >= 1 && enemies.length === 0) {
+                endGame(true);
+            }
+        }
+
+        function draw() {
+            CTX.fillStyle = '#2e8b57'; 
+            CTX.fillRect(0, 0, CANVAS.width, CANVAS.height);
+
+            CTX.save();
+            let camX = CANVAS.width/2 - player.x;
+            let camY = CANVAS.height/2 - player.y;
+            CTX.translate(camX, camY);
+
+            let viewL = player.x - CANVAS.width/2 - 100;
+            let viewR = player.x + CANVAS.width/2 + 100;
+            let viewT = player.y - CANVAS.height/2 - 100;
+            let viewB = player.y + CANVAS.height/2 + 100;
+
+            // DRAW TILES (Rumput Background) - SEAMLESS 2x SCALE
+            if (IMAGES.rumput) {
+                let scale = 2; // Perbesar 2x
+                let tileW = IMAGES.rumput.img.width * scale;
+                let tileH = IMAGES.rumput.img.height * scale;
+                if(tileW > 0) {
+                    // Hitung area yang perlu digambar (termasuk margin luar layar)
+                    let startCol = Math.floor(viewL / tileW) - 1; // Extra margin
+                    let endCol = Math.floor(viewR / tileW) + 2;
+                    let startRow = Math.floor(viewT / tileH) - 1;
+                    let endRow = Math.floor(viewB / tileH) + 2;
+
+                    for (let c = startCol; c < endCol; c++) {
+                        for (let r = startRow; r < endRow; r++) {
+                            CTX.drawImage(IMAGES.rumput.img, c * tileW, r * tileH, tileW, tileH);
+                        }
+                    }
+                }
+            } else {
+                // Fallback color jika gambar belum load
+                CTX.fillStyle = '#2e8b57'; 
+                CTX.fillRect(viewL, viewT, viewR - viewL, viewB - viewT);
+            }
+
+            items.forEach(item => {
+                if(item.x > viewL && item.x < viewR && item.y > viewT && item.y < viewB) {
+                    if (item.type === 'exp') {
+                        CTX.fillStyle = '#00ffff';
+                        CTX.beginPath();
+                        CTX.arc(item.x, item.y, 5, 0, Math.PI*2);
+                        CTX.fill();
+                        CTX.shadowColor = '#00ffff';
+                        CTX.shadowBlur = 5;
+                    } else {
+                        CTX.fillStyle = '#ffd700';
+                        CTX.beginPath();
+                        CTX.arc(item.x, item.y, 6, 0, Math.PI*2);
+                        CTX.fill();
+                        CTX.strokeStyle = '#daa520';
+                        CTX.lineWidth = 1;
+                        CTX.stroke();
+                        CTX.shadowBlur = 0;
+                    }
+                    CTX.shadowBlur = 0;
+                }
+            });
+
+            let floorEffs = projectiles.filter(p => p.opts.isFloor || p.type === 'aura_listrik' || p.type === 'aura_gelombang' || p.type === 'spawner_hujan');
+            let entities = [...enemies, player, ...projectiles.filter(p => !p.opts.isFloor && p.type !== 'aura_listrik' && p.type !== 'aura_gelombang' && p.type !== 'spawner_hujan' && p.type !== 'clone')];
+            projectiles.filter(p => p.type === 'clone').forEach(c => entities.push(c));
+            
+            floorEffs.forEach(p => p.draw());
+            entities.sort((a, b) => a.y - b.y);
+            
+            entities.forEach(e => {
+                if (e instanceof Enemy) {
+                    if(e.x > viewL && e.x < viewR && e.y > viewT && e.y < viewB) e.draw();
+                } else {
+                    e.draw(); 
+                }
+            });
+
+            damageTexts.forEach(t => {
+                CTX.fillStyle = t.color;
+                CTX.font = 'bold 16px Arial';
+                CTX.strokeStyle = 'black';
+                CTX.lineWidth = 3;
+                CTX.strokeText(t.val, t.x, t.y);
+                CTX.fillText(t.val, t.x, t.y);
+            });
+
+            CTX.restore();
+
+            if (joystick.active) {
+                CTX.beginPath();
+                CTX.arc(joystick.baseX, joystick.baseY, JOYSTICK_RADIUS, 0, Math.PI*2);
+                CTX.strokeStyle = 'rgba(255,255,255,0.5)';
+                CTX.lineWidth = 4;
+                CTX.stroke();
+                CTX.fillStyle = 'rgba(255,255,255,0.1)';
+                CTX.fill();
+
+                CTX.beginPath();
+                CTX.arc(joystick.baseX + joystick.dx, joystick.baseY + joystick.dy, 30, 0, Math.PI*2);
+                CTX.fillStyle = 'rgba(255,255,255,0.8)';
+                CTX.fill();
+            } else {
+                CTX.beginPath();
+                CTX.arc(defaultJoyX, defaultJoyY, JOYSTICK_RADIUS, 0, Math.PI*2);
+                CTX.strokeStyle = 'rgba(255,255,255,0.1)';
+                CTX.lineWidth = 2;
+                CTX.stroke();
+                CTX.beginPath();
+                CTX.arc(defaultJoyX, defaultJoyY, 10, 0, Math.PI*2);
+                CTX.fillStyle = 'rgba(255,255,255,0.1)';
+                CTX.fill();
+            }
+        }
+
+        function showLevelUp() {
+            document.getElementById('screen-levelup').classList.remove('hidden');
+            document.getElementById('joystick-zone').style.display = 'none';
+            joystick.active = false; 
+            const container = document.getElementById('levelup-container');
+            container.innerHTML = '';
+            let candidates = [];
+            for (let key in SKILLS) {
+                let s = SKILLS[key];
+                if (s.owner === 'all' || s.owner === player.id) {
+                    let currentLvl = (player.skills[key]) ? player.skills[key].level : 0;
+                    if (currentLvl < s.maxLevel) candidates.push({id: key, ...s, currentLvl});
+                }
+            }
+            candidates.sort(() => Math.random() - 0.5);
+            let choices = candidates.slice(0, 3);
+            if (choices.length === 0) choices.push({id: 'heal', name: 'Jamu Gendong', desc: 'Pulihkan 50% HP', currentLvl: 0, maxLevel: 99});
+            choices.forEach(c => {
+                let isEvo = c.currentLvl === 2 && c.id !== 'heal';
+                let starStr = '';
+                for(let i=0; i<=c.currentLvl; i++) starStr += '★';
+                let el = document.createElement('div');
+                el.className = 'upgrade-card';
+                el.innerHTML = `
+                    <div class="card-title">${c.name}</div>
+                    <div class="${isEvo ? 'red-star' : 'stars'}">${starStr}</div>
+                    <div class="card-desc">${c.desc}</div>
+                    <div style="font-size:12px; margin-top:5px; font-weight:bold; color:#e67e22;">
+                        ${isEvo ? "EVOLUSI ULTIMATE!" : (c.currentLvl === 0 ? "Baru" : "Upgrade Lvl " + (c.currentLvl+1))}
+                    </div>
+                `;
+                el.onclick = () => applyUpgrade(c);
+                container.appendChild(el);
+            });
+        }
+
+        function applyUpgrade(skillInfo) {
+            if (skillInfo.id === 'heal') {
+                player.heal(player.maxHp * 0.5);
+            } else {
+                player.addSkill(skillInfo.id);
+            }
+            document.getElementById('screen-levelup').classList.add('hidden');
+            document.getElementById('joystick-zone').style.display = 'block';
+            gameState = "PLAYING";
+            if (!animationFrameId) loop();
+        }
+
+        function endGame(victory) {
+            gameState = victory ? "VICTORY" : "GAMEOVER";
+            savedData.coins += sessionCoins;
+            localStorage.setItem('penjagaNusantaraDataV8', JSON.stringify(savedData));
+            
+            let screenId = victory ? 'screen-victory' : 'screen-gameover';
+            let coinId = victory ? 'vic-coins' : 'end-coins';
+            document.getElementById(screenId).classList.remove('hidden');
+            document.getElementById(coinId).innerText = sessionCoins;
+            document.getElementById('hud').style.display = 'none';
+        }
+
+        const joyZone = document.getElementById('joystick-zone');
+        function handleStart(x, y) {
+            if (gameState !== 'PLAYING') return;
+            joystick.active = true;
+            joystick.baseX = x; joystick.baseY = y;
+            joystick.dx = 0; joystick.dy = 0;
+        }
+        function handleMove(x, y) {
+            if (!joystick.active) return;
+            let dx = x - joystick.baseX;
+            let dy = y - joystick.baseY;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            let angle = Math.atan2(dy, dx);
+            if (dist > JOYSTICK_RADIUS) {
+                dx = Math.cos(angle) * JOYSTICK_RADIUS;
+                dy = Math.sin(angle) * JOYSTICK_RADIUS;
+            }
+            joystick.dx = dx; joystick.dy = dy; joystick.angle = angle;
+        }
+        function handleEnd() {
+            joystick.active = false;
+            joystick.dx = 0; joystick.dy = 0;
+        }
+        joyZone.addEventListener('touchstart', e => { e.preventDefault(); handleStart(e.touches[0].clientX, e.touches[0].clientY); }, {passive: false});
+        joyZone.addEventListener('touchmove', e => { e.preventDefault(); handleMove(e.touches[0].clientX, e.touches[0].clientY); }, {passive: false});
+        joyZone.addEventListener('touchend', e => { e.preventDefault(); handleEnd(); }, {passive: false});
+        let isMouseDown = false;
+        joyZone.addEventListener('mousedown', e => { isMouseDown = true; handleStart(e.clientX, e.clientY); });
+        window.addEventListener('mousemove', e => { if(isMouseDown) handleMove(e.clientX, e.clientY); });
+        window.addEventListener('mouseup', e => { isMouseDown = false; handleEnd(); });
+
+        loadAssets(); // START
+
+    </script>
+</body>
+</html>
